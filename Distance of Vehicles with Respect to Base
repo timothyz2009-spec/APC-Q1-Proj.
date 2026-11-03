@@ -1,0 +1,71 @@
+#This is our graph for the distance of the vehicles with respect to the base. 
+#We have also decided to mark time t = 100 s, since that is used for sol.1, alongside the time
+#at which the tank and small vehicle intersect, and vertical lines to indicate the piecewise functions. 
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rcParams.update({
+    "font.size": 8,
+    "axes.labelsize": 8,
+    "legend.fontsize": 6.5,
+    "xtick.labelsize": 7,
+    "ytick.labelsize": 7,
+    "lines.linewidth": 1.2,
+})
+
+#Distance-to-base functions (Eqs. 4-6)
+def d_tank(t):
+    t = np.asarray(t, dtype=float)
+    return np.where(t <= 12.48, 3500 - 0.5 * 1.25 * t**2, 3597.35 - 15.6 * t)
+
+def d_small(t):
+    t = np.asarray(t, dtype=float)
+    return np.where(t <= 30.06, -0.5 * 3.2 * t**2 + 67.1 * t + 2803.1,
+                    4249.11 - 29.1 * t)
+
+def d_armor(t):
+    t = np.asarray(t, dtype=float)
+    return 2000 - 15.5 * t
+
+t_end = 120.0                             
+t_all = np.linspace(0, t_end, 1000)
+t_small = np.linspace(23, t_end, 1000)    # small vehicle only exists for t >= 23 s
+
+# Crossing of tank and small vehicle (both at constant speed)
+t_cross = (4249.11 - 3597.35) / (29.1 - 15.6)
+d_cross = float(d_tank(t_cross))
+
+#Figure
+fig, ax = plt.subplots(figsize=(3.5, 2.6))
+
+ax.plot(t_all, d_tank(t_all), color="tab:red", label="Tank")
+ax.plot(t_small, d_small(t_small), color="tab:blue", label="Small vehicle")
+ax.plot(t_all, d_armor(t_all), color="tab:green", label="Large armored")
+
+#Piecewise vertical transition markers
+for t_mark, txt in [(12.48, "tank top\nspeed"),
+                    (23.0, "small vehicle\nenters"),
+                    (30.06, "small vehicle\ntop speed")]:
+    ax.axvline(t_mark, color="gray", linestyle=":", linewidth=0.8)
+    ax.text(t_mark + 0.8, 80, txt, rotation=90, fontsize=5.5,
+            va="bottom", ha="left", color="gray")
+
+#Impact time at t=100s (Solution 1)
+ax.axvline(100, color="black", linestyle="--", linewidth=0.8)
+
+#Tank/small vehicle intersection
+ax.plot(t_cross, d_cross, marker="o", markersize=3.5, color="black", linestyle="none")
+ax.annotate(f"cross: t = {t_cross:.1f} s", (t_cross, d_cross),
+            textcoords="offset points", xytext=(5, 6), fontsize=6)
+
+ax.set_xlabel("Time, $t$ (s)")
+ax.set_ylabel("Distance to base (m)")
+ax.set_xlim(0, t_end + 2)
+ax.set_ylim(0, 3700)
+ax.grid(True, alpha=0.3)
+ax.legend(loc="upper right", frameon=True, framealpha=0.9)
+fig.tight_layout()
+
+fig.savefig("vehicle_distance_vs_time.pdf", bbox_inches="tight")
+fig.savefig("vehicle_distance_vs_time.png", dpi=600, bbox_inches="tight")
+plt.show()
