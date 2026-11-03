@@ -1,0 +1,79 @@
+#This is our graph for Trajectories of the three shells for solution 1, all impacting at time t=100s.
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rcParams.update({
+    "font.size": 8,
+    "axes.labelsize": 8,
+    "axes.titlesize": 8,
+    "legend.fontsize": 6.5,
+    "xtick.labelsize": 7,
+    "ytick.labelsize": 7,
+    "lines.linewidth": 1.2,})
+
+g = 9.8           # m/s^2, gravity on earth. We are assuming no air resistance here
+t_impact = 100.0  # s
+
+#Vehicle distance-to-base functions (Eqs. 4-6 in the manuscript)
+def d_tank(t):
+    t = np.asarray(t, dtype=float)
+    return np.where(t <= 12.48, 3500 - 0.5 * 1.25 * t**2, 3597.35 - 15.6 * t)
+
+def d_small(t):
+    # Defined for t >= 23 (vehicle enters the road at t = 23 s)
+    t = np.asarray(t, dtype=float)
+    return np.where(t <= 30.06, -0.5 * 3.2 * t**2 + 67.1 * t + 2803.1,
+                    4249.11 - 29.1 * t)
+
+def d_armor(t):
+    t = np.asarray(t, dtype=float)
+    return 2000 - 15.5 * t
+
+#Projectile fired model (Eqs. 7-8 in the manuscript)
+def x_shell(t, t0, v, theta_deg):
+    return v * (t - t0) * np.cos(np.radians(theta_deg))
+
+def y_shell(t, t0, v, theta_deg):
+    return v * (t - t0) * np.sin(np.radians(theta_deg)) - 0.5 * g * (t - t0)**2
+
+#Table 1: Solution 1 launch parameters
+shells = {
+    "Projectile 1 (Tank)":          dict(v=141.35, theta=43.89, t0=80, target=d_tank),
+    "Projectile 2 (Small vehicle)": dict(v=115.64, theta=39.46, t0=85, target=d_small),
+    "Projectile 3 (Large armored)": dict(v=66.53,  theta=47.44, t0=90, target=d_armor), }
+colors = ["tab:red", "tab:blue", "tab:green"]
+
+#Figure
+fig, ax = plt.subplots(figsize=(3.5, 2.6))
+
+for (name, p), c in zip(shells.items(), colors):
+    t = np.linspace(p["t0"], t_impact, 400)
+    ax.plot(x_shell(t, p["t0"], p["v"], p["theta"]),
+            y_shell(t, p["t0"], p["v"], p["theta"]),
+            color=c, label=name)
+
+# Target vehicle position at impact (ground, y = 0)
+    x_target = float(p["target"](t_impact))
+    ax.plot(x_target, 0, marker="X", markersize=5, color=c,
+            markeredgecolor="black", markeredgewidth=0.5, linestyle="none")
+    ax.annotate(f"{x_target:.0f} m", (x_target, 0),
+                textcoords="offset points", xytext=(0, 7),
+                ha="center", fontsize=6.5)
+
+# Base / Howitzer at the origin
+ax.plot(0, 0, marker="s", markersize=5, color="black", linestyle="none",
+        label="Base / Howitzer (0, 0)")
+
+ax.set_xlabel("x: distance from base (m)")
+ax.set_ylabel("y: height (m)")
+ax.set_title("Solution 1: Shell Trajectories ($t_{impact}$ = 100 s)")
+ax.set_ylim(-40, 650)  
+ax.grid(True, alpha=0.3)
+ax.legend(loc="upper right", frameon=True, framealpha=0.9)
+
+fig.tight_layout()
+
+# Saving pdf/image
+fig.savefig("solution1_trajectories.pdf", bbox_inches="tight")            
+fig.savefig("solution1_trajectories.png", dpi=600, bbox_inches="tight")   
+plt.show()
