@@ -1,0 +1,95 @@
+#This is our graph of the trajectories for sol. 2, where two shells are launched. 
+import numpy as np
+import matplotlib.pyplot as plt
+
+plt.rcParams.update({
+    "font.size": 8,
+    "axes.labelsize": 8,
+    "axes.titlesize": 8,
+    "legend.fontsize": 6.5,
+    "xtick.labelsize": 7,
+    "ytick.labelsize": 7,
+    "lines.linewidth": 1.2,
+})
+
+g = 9.8  # m/s^2, gravity on earth. We are assuming no air resistance here
+
+#Vehicle distance-to-base functions
+def d_tank(t):
+    t = np.asarray(t, dtype=float)
+    return np.where(t <= 12.48, 3500 - 0.5 * 1.25 * t**2, 3597.35 - 15.6 * t)
+
+def d_small(t):
+    # Defined for t >= 23 
+    t = np.asarray(t, dtype=float)
+    return np.where(t <= 30.06, -0.5 * 3.2 * t**2 + 67.1 * t + 2803.1,
+                    4249.11 - 29.1 * t)
+
+def d_armor(t):
+    t = np.asarray(t, dtype=float)
+    return 2000 - 15.5 * t
+
+#Projectile model
+def x_shell(t, t0, v, theta_deg):
+    return v * (t - t0) * np.cos(np.radians(theta_deg))
+
+def y_shell(t, t0, v, theta_deg):
+    return v * (t - t0) * np.sin(np.radians(theta_deg)) - 0.5 * g * (t - t0)**2
+
+def flight_time(v, theta_deg):
+    return 2 * v * np.sin(np.radians(theta_deg)) / g
+
+#Table 2: Solution 2 launch parameters
+shells = {
+    "Projectile 1 (tank + small vehicle)": dict(
+        v=179.53, theta=29.93, t0=30, targets=[d_tank, d_small]),
+    "Projectile 2 (large armored)": dict(
+        v=114.53, theta=34.62, t0=35, targets=[d_armor]),
+}
+colors = ["tab:red", "tab:green"]
+
+impact_times = []
+for name, p in shells.items():
+    t_imp = p["t0"] + flight_time(p["v"], p["theta"])
+    p["t_impact"] = t_imp
+    impact_times.append(t_imp)
+    xs = float(x_shell(t_imp, p["t0"], p["v"], p["theta"]))
+    ys = float(y_shell(t_imp, p["t0"], p["v"], p["theta"]))
+    tgt = [round(float(f(t_imp)), 1) for f in p["targets"]]
+    print(f"{name}: lands at t = {t_imp:.2f} s, shell x = {xs:.1f} m, "
+          f"shell y = {ys:.2f} m, targets = {tgt} m")
+print(f"Time between impacts: {max(impact_times) - min(impact_times):.2f} s (limit 1.5 s)")
+
+#Figure
+fig, ax = plt.subplots(figsize=(3.5, 2.6))
+
+for (name, p), c in zip(shells.items(), colors):
+    t = np.linspace(p["t0"], p["t_impact"], 400)
+    ax.plot(x_shell(t, p["t0"], p["v"], p["theta"]),
+            y_shell(t, p["t0"], p["v"], p["theta"]),
+            color=c, label=name)
+
+    # Target position at impact (ground, y = 0)
+    x_target = float(p["targets"][0](p["t_impact"]))
+    ax.plot(x_target, 0, marker="X", markersize=5, color=c,
+            markeredgecolor="black", markeredgewidth=0.5, linestyle="none")
+    ax.annotate(f"{x_target:.0f} m", (x_target, 0),
+                textcoords="offset points", xytext=(0, 7),
+                ha="center", fontsize=6.5)
+
+# Base / Howitzer at the origin
+ax.plot(0, 0, marker="s", markersize=5, color="black", linestyle="none",
+        label="Base / Howitzer (0, 0)")
+
+ax.set_xlabel("x: distance from base (m)")
+ax.set_ylabel("y: height (m)")
+ax.set_ylim(-30, 600)  
+ax.grid(True, alpha=0.3)
+ax.legend(loc="upper right", frameon=True, framealpha=0.9)
+
+fig.tight_layout()
+
+# Save pdf/graph
+fig.savefig("solution2_trajectories.pdf", bbox_inches="tight")
+fig.savefig("solution2_trajectories.png", dpi=600, bbox_inches="tight")
+plt.show()
